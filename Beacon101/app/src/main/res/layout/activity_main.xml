@@ -34,6 +34,16 @@
         </android.support.design.widget.CollapsingToolbarLayout>
     </android.support.design.widget.AppBarLayout>
 
+    <com.airbnb.lottie.LottieAnimationView
+
+        android:layout_gravity="center"
+        android:id="@+id/animation_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:lottie_autoPlay="true"
+        app:lottie_loop="true"
+        app:lottie_rawRes="@raw/veil" />
+
     <include layout="@layout/content_scrolling" />
 
     <android.support.design.widget.FloatingActionButton
@@ -43,6 +53,6 @@
         android:layout_margin="@dimen/fab_margin"
         app:layout_anchor="@id/app_bar"
         app:layout_anchorGravity="bottom|end"
-        app:srcCompat="@android:drawable/ic_menu_search" />
+        app:srcCompat="@drawable/ic_speaker_notes_black_24dp" />
 
 </android.support.design.widget.CoordinatorLayout>

@@ -15,6 +15,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.RemoteException;
 import android.support.design.widget.FloatingActionButton;
+import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.NotificationCompat;
 import android.support.v7.app.AlertDialog;
@@ -26,6 +27,8 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+
+import com.airbnb.lottie.LottieAnimationView;
 
 import org.altbeacon.beacon.Beacon;
 import org.altbeacon.beacon.BeaconConsumer;
@@ -69,8 +72,9 @@ public class MainActivity extends AppCompatActivity implements BeaconConsumer {
 
 
     RecyclerView recyclerView;
-    ArrayList<KNUBeacon>  beaconArrayList;
+    ArrayList<KNUBeacon> beaconArrayList;
     BeaconDeviceAdapter adapter;
+    LottieAnimationView animationView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -79,12 +83,14 @@ public class MainActivity extends AppCompatActivity implements BeaconConsumer {
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        recyclerView  = (RecyclerView)findViewById(R.id.recycler_view);
-        floatingActionButton = (FloatingActionButton)findViewById(R.id.fab);
+        recyclerView = (RecyclerView) findViewById(R.id.recycler_view);
+        floatingActionButton = (FloatingActionButton) findViewById(R.id.fab);
 
         recyclerView.setHasFixedSize(true);
         recyclerView.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false));
         beaconArrayList = new ArrayList<>();
+
+        animationView = (LottieAnimationView) findViewById(R.id.animation_view);
 
         checkPermission();
         getBluetoothAdapter();
@@ -104,12 +110,12 @@ public class MainActivity extends AppCompatActivity implements BeaconConsumer {
             public void onClick(View v) {
                 if (beaconManager.isBound(MainActivity.this)) {
                     floatingActionButton.setImageResource(R.drawable.ic_speaker_notes_black_24dp);
-                    Log.i(TAG, "Stop BLE Scanning...");
                     beaconManager.unbind(MainActivity.this);
+                    Snackbar.make(getWindow().getDecorView().getRootView(), "Scan Stop", Snackbar.LENGTH_SHORT).show();
                 } else {
                     floatingActionButton.setImageResource(R.drawable.ic_speaker_notes_off_black_24dp);
-                    Log.i(TAG, "Start BLE Scanning...");
                     beaconManager.bind(MainActivity.this);
+                    Snackbar.make(getWindow().getDecorView().getRootView(), "Scan Start", Snackbar.LENGTH_SHORT).show();
                 }
             }
         });
@@ -203,13 +209,13 @@ public class MainActivity extends AppCompatActivity implements BeaconConsumer {
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.menu_scrolling,menu);
+        getMenuInflater().inflate(R.menu.menu_scrolling, menu);
         return super.onCreateOptionsMenu(menu);
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()){
+        switch (item.getItemId()) {
             case R.id.action_settings:
                 Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/JAICHANGPARK"));
                 intent.setPackage("com.android.chrome");
@@ -224,17 +230,18 @@ public class MainActivity extends AppCompatActivity implements BeaconConsumer {
         beaconManager.addRangeNotifier(new RangeNotifier() {
             @Override
             public void didRangeBeaconsInRegion(Collection<Beacon> beacons, Region region) {
-                if(beaconArrayList.size() != 0){
+
+                if (beaconArrayList.size() != 0) {
                     beaconArrayList.clear();
                 }
                 if (beacons.size() > 0) {
                     Iterator<Beacon> iterator = beacons.iterator();
 
                     while (iterator.hasNext()) {
-                       // beaconArrayList = new ArrayList<>();
+                        // beaconArrayList = new ArrayList<>();
                         Beacon beacon = iterator.next();
                         String address = beacon.getBluetoothAddress();
-                        Log.e(TAG, "getBluetoothAddress: " + address );
+                        Log.e(TAG, "getBluetoothAddress: " + address);
                         double rssi = beacon.getRssi();
                         int txPower = beacon.getTxPower();
                         double distance = Double.parseDouble(decimalFormat.format(beacon.getDistance()));
@@ -244,7 +251,7 @@ public class MainActivity extends AppCompatActivity implements BeaconConsumer {
                         String minor = beacon.getId3().toString();
                         String uuid = String.valueOf(beacon.getId1()).toUpperCase();
 
-                        beaconArrayList.add(new KNUBeacon(beacon.getBluetoothName(), address,uuid, major, minor, String.format("%s m",String.valueOf(distance))));
+                        beaconArrayList.add(new KNUBeacon(beacon.getBluetoothName(), address, uuid, major, minor, String.format("%s m", String.valueOf(distance))));
                     }
                     runOnUiThread(new Runnable() {
                         @Override
@@ -299,18 +306,44 @@ public class MainActivity extends AppCompatActivity implements BeaconConsumer {
             public void didEnterRegion(Region region) {
                 //Log.e(TAG, "didEnterRegion: " + region.getBluetoothAddress());
                 Log.e(TAG, "I just saw an beacon for the first time!");
+
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        recyclerView.setVisibility(View.VISIBLE);
+                        animationView.setVisibility(View.GONE);
+                        animationView.cancelAnimation();
+                    }
+                });
             }
 
             @Override
             public void didExitRegion(Region region) {
                 //Log.e(TAG, "didEnterRegion: " + region.getBluetoothAddress());
                 Log.e(TAG, "I no longer see an beacon");
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        recyclerView.setVisibility(View.GONE);
+                        animationView.setVisibility(View.VISIBLE);
+                    }
+                });
+                //animationView.playAnimation();
             }
 
             @Override
             public void didDetermineStateForRegion(int i, Region region) {
                 Log.e(TAG, "I have just switched from seeing/not seeing beacons: " + i);
                 //Log.e(TAG, "didEnterRegion: " + region.getBluetoothAddress());
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        recyclerView.setVisibility(View.GONE);
+                        animationView.setVisibility(View.VISIBLE);
+                        animationView.playAnimation();
+                    }
+                });
+                //
             }
         });
 
@@ -396,9 +429,9 @@ public class MainActivity extends AppCompatActivity implements BeaconConsumer {
 
     private void sendNotification() {
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, "sex")
-                        .setContentTitle("Beacon Reference Application")
-                        .setContentText("An beacon is nearby.")
-                        .setSmallIcon(R.drawable.ic_launcher_foreground);
+                .setContentTitle("Beacon Reference Application")
+                .setContentText("An beacon is nearby.")
+                .setSmallIcon(R.drawable.ic_launcher_foreground);
 
         TaskStackBuilder stackBuilder = TaskStackBuilder.create(this);
         stackBuilder.addNextIntent(new Intent(this, MainActivity.class));
