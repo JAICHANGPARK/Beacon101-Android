@@ -10,6 +10,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.RemoteException;
@@ -22,6 +23,8 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 
 import org.altbeacon.beacon.Beacon;
@@ -38,6 +41,12 @@ import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
+
+import static com.dreamwalker.beacon101.BeaconConst.ALTBEACON_LAYOUT;
+import static com.dreamwalker.beacon101.BeaconConst.EDDYSTONE_TLM_LAYOUT;
+import static com.dreamwalker.beacon101.BeaconConst.EDDYSTONE_UID_LAYOUT;
+import static com.dreamwalker.beacon101.BeaconConst.EDDYSTONE_URL_LAYOUT;
+import static com.dreamwalker.beacon101.BeaconConst.EDDYSTON_BEACON_PARSER;
 
 public class MainActivity extends AppCompatActivity implements BeaconConsumer {
 
@@ -116,7 +125,6 @@ public class MainActivity extends AppCompatActivity implements BeaconConsumer {
     }
 
     private void checkBluetoothAdapter(BluetoothAdapter adapter) {
-        // 블루투스 권한을 얻는 코드입니다.
         if (!adapter.isEnabled()) {
             Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
@@ -131,6 +139,11 @@ public class MainActivity extends AppCompatActivity implements BeaconConsumer {
     private void setBeaconManager(String beaconFilter) {
         beaconManager = BeaconManager.getInstanceForApplication(this);
         beaconManager.getBeaconParsers().add(new BeaconParser().setBeaconLayout(beaconFilter));
+        beaconManager.getBeaconParsers().add(new BeaconParser().setBeaconLayout(ALTBEACON_LAYOUT));
+        beaconManager.getBeaconParsers().add(new BeaconParser().setBeaconLayout(EDDYSTON_BEACON_PARSER));
+        beaconManager.getBeaconParsers().add(new BeaconParser().setBeaconLayout(EDDYSTONE_TLM_LAYOUT));
+        beaconManager.getBeaconParsers().add(new BeaconParser().setBeaconLayout(EDDYSTONE_UID_LAYOUT));
+        beaconManager.getBeaconParsers().add(new BeaconParser().setBeaconLayout(EDDYSTONE_URL_LAYOUT));
     }
 
     private void checkPermission() {
@@ -189,18 +202,39 @@ public class MainActivity extends AppCompatActivity implements BeaconConsumer {
     }
 
     @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.menu_scrolling,menu);
+        return super.onCreateOptionsMenu(menu);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()){
+            case R.id.action_settings:
+                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/JAICHANGPARK"));
+                intent.setPackage("com.android.chrome");
+                startActivity(intent);
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
+    @Override
     public void onBeaconServiceConnect() {
 
-        beaconManager.setRangeNotifier(new RangeNotifier() {
+        beaconManager.addRangeNotifier(new RangeNotifier() {
             @Override
             public void didRangeBeaconsInRegion(Collection<Beacon> beacons, Region region) {
-
+                if(beaconArrayList.size() != 0){
+                    beaconArrayList.clear();
+                }
                 if (beacons.size() > 0) {
                     Iterator<Beacon> iterator = beacons.iterator();
-                    beaconArrayList.clear();
+
                     while (iterator.hasNext()) {
+                       // beaconArrayList = new ArrayList<>();
                         Beacon beacon = iterator.next();
                         String address = beacon.getBluetoothAddress();
+                        Log.e(TAG, "getBluetoothAddress: " + address );
                         double rssi = beacon.getRssi();
                         int txPower = beacon.getTxPower();
                         double distance = Double.parseDouble(decimalFormat.format(beacon.getDistance()));
@@ -208,7 +242,7 @@ public class MainActivity extends AppCompatActivity implements BeaconConsumer {
 //                        int minor = beacon.getId3().toInt();
                         String major = beacon.getId2().toString();
                         String minor = beacon.getId3().toString();
-                        String uuid = String.valueOf(beacon.getId1());
+                        String uuid = String.valueOf(beacon.getId1()).toUpperCase();
 
                         beaconArrayList.add(new KNUBeacon(beacon.getBluetoothName(), address,uuid, major, minor, String.format("%s m",String.valueOf(distance))));
                     }
